@@ -11,7 +11,8 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/dkoutavas/lyaeus"
 
 [lib]
-crate-type = ["cdylib"]
+# rlib so examples/render.rs can drive the DSP offline.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Same pinned rev as drumgen: known to build here and to load in Bitwig.

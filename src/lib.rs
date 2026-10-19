@@ -6,13 +6,13 @@
 use nih_plug::prelude::*;
 use std::sync::Arc;
 
-mod amp;
-mod drive;
-mod feedback;
-mod filters;
-mod oversample;
-mod rat;
-mod tonestack;
+pub mod amp;
+pub mod drive;
+pub mod feedback;
+pub mod filters;
+pub mod oversample;
+pub mod rat;
+pub mod tonestack;
 #[cfg(test)]
 mod testutil;
 

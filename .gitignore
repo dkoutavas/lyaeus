@@ -1,4 +1,5 @@
 /target
+/renders
 
 # Claude Code config (stored in private context repo)
 CLAUDE.md

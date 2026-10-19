@@ -350,6 +350,17 @@ impl Feedbacker {
         x + amp * (2.0 * PI * self.phase).sin() as f32
     }
 
+    /// Detected pitch, stage name and feedback envelope in dB, for the
+    /// offline render log.
+    pub fn probe(&self) -> (Option<f32>, &'static str, f32) {
+        let stage = match self.stage {
+            Stage::Idle => "idle",
+            Stage::Holding => "holding",
+            Stage::Feeding => "feeding",
+        };
+        (self.yin.pitch, stage, self.env_db)
+    }
+
     pub fn reset(&mut self) {
         self.yin.reset();
         self.level.reset();

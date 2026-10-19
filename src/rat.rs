@@ -73,7 +73,7 @@ fn one_pole_g(corner: f32, sample_rate: f32) -> f32 {
 
 /// Distortion knob 0..=1 to feedback resistance. The pot is audio taper, so
 /// the knob covers two decades: half way is about 9 kOhm, not 50.
-fn feedback_ohms(knob: f32) -> f32 {
+pub fn feedback_ohms(knob: f32) -> f32 {
     RF_MAX * (10f32.powf(2.0 * knob) - 1.0) / 99.0
 }
 
