@@ -1,14 +1,18 @@
 # lyaeus
 
-Two guitar plugins for Linux in one bundle, CLAP and VST3, written in Rust
-with nih-plug. Both names are epithets of Dionysus.
+Four guitar plugins for Linux in one bundle, CLAP and VST3, written in
+Rust with nih-plug. The names are epithets of Dionysus.
 
 - **lyaeus** (Λυαῖος, "the loosener"): a cranked Fender-style tube amp, the
   kind Sonic Youth pushed into breakup.
-- **bromios** (Βρόμιος, "the roarer"): a ProCo RAT style distortion pedal
-  to put in front of it.
+- **bromios** (Βρόμιος, "the roarer"): a ProCo RAT style distortion pedal.
+- **meilichios** (Μειλίχιος, "the gentle one"): a Blues Driver style
+  overdrive.
+- **euios** (Εὔιος, from the bacchic cry): guitar feedback at bedroom
+  volume.
 
-Chain in the host: bromios, then lyaeus, then a cabinet impulse response.
+Chain in the host: euios, then a pedal or two, then lyaeus, then a cabinet
+impulse response.
 
 No model and no machine learning. Each stage is a small piece of circuit
 math with a comment that says what it stands for and why it is there.
@@ -128,6 +132,55 @@ so it was removed.
 | same, plus ADAA on the diode knee | -58 dB |
 | rate-limited one-pole | -93 dB |
 
+## meilichios, the overdrive
+
+### Knobs
+
+| Knob | What it does |
+|------|--------------|
+| Gain | 0 to 36 dB into the clip. |
+| Tone | Boss-style blend between a low-pass and a high-pass at 1 kHz. 5 is flat, 0 dark, 10 bright and thin. |
+| Level | Output, -40 to +12 dB. |
+
+A character model, not a schematic trace. The clip is a tanh with its knee
+at 1.2 V, two diodes in series each way as in the BD-2's feedback loop,
+followed by a square-law bend standing for the FET output stage: a little
+asymmetry, even harmonics, "amp-like". It keeps the bass and does not hump
+the mids. Use it as a clean boost into lyaeus at low Gain or stacked into
+bromios.
+
+## euios, the feedbacker
+
+### Knobs
+
+| Knob | What it does |
+|------|--------------|
+| Harmonic | Which harmonic of the held note feeds back: 1 to 5. 2 is the octave, the classic. |
+| Onset | How long a note must be held before feedback starts, 0.1 to 3 s. |
+| Swell | How long the feedback takes to reach full level, 0.1 to 2 s. |
+| Gain | Feedback level, up to about a hot pickup's. |
+| Wobble | A few cents of slow pitch wander, as real feedback has. |
+| Active | The footswitch. Automate it or map it to a MIDI controller. |
+
+Real feedback is the speaker shaking the string at one of its modes until
+the loop gain passes one; a harmonic swells in and takes over. There is no
+acoustic loop inside a plugin chain, so euios follows the DigiTech FreqOut
+idea: it reads the pitch of the note you hold, waits the Onset time, then
+swells in a sine at the chosen harmonic and lets the pedals and the amp
+after it do what a loud room would. A fed-back string mode is close to a
+sine anyway.
+
+It only sounds while a note is held, so there is no idle hiss. Once
+feedback is established it keeps going until you mute the strings; a
+decaying note does not stop it, a palm mute does. A new note restarts the
+Onset clock. Bends and vibrato are followed with a 50 ms lag.
+
+Pitch detection is YIN (de Cheveigné and Kawahara, 2002) on a 1024-sample
+window, refreshed every 1024 samples, 70 to 1000 Hz. The tests read sines
+across the guitar range and a Karplus-Strong plucked string to within 1 %
+and call white noise unvoiced. Put euios first in the chain, on the clean
+guitar.
+
 ## Oversampling
 
 Clipping creates harmonics far above the audible band. At the plain sample
@@ -138,13 +191,14 @@ the plugin reports 32 samples of latency to the host.
 The aliasing tests measure the worst non-harmonic spectral line for a
 1010 Hz tone at full gain or full distortion:
 
-| Oversampling | lyaeus | bromios |
-|--------------|--------|---------|
-| 4x | -66 dB | |
-| 8x | -96 dB | -93 dB |
-| 16x | -104 dB | |
+| Oversampling | lyaeus | bromios | meilichios |
+|--------------|--------|---------|------------|
+| 4x | -66 dB | | |
+| 8x | -96 dB | -93 dB | -124 dB |
+| 16x | -104 dB | | |
 
-8x is the shipped setting for both. Change `FACTOR` and `TAPS` in `src/oversample.rs`
+8x is the shipped setting for all three. euios has no clipper and no
+oversampling. Change `FACTOR` and `TAPS` in `src/oversample.rs`
 to try another.
 
 ## Tests
@@ -161,7 +215,10 @@ silence stays silence, that the output carries no DC, that Sag compresses
 a held note, and the aliasing level above. For the pedal they check the
 gain network's 66 dB and its bass roll-off, the op-amp's slew rate and
 small-signal pole, the diode table against the solver, silence, DC, and
-the aliasing level.
+the aliasing level. For meilichios: aliasing, silence, DC, the clip
+ceiling, the tone range. For euios: YIN on sines, on a plucked string and
+on noise; silence; the octave swelling in after the onset and dying after
+a mute; a new note restarting the clock.
 
 ## Roadmap
 

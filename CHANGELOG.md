@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-10-19
+
+Two more pedals in the bundle.
+
+- euios: feedback at any volume. YIN pitch detection on the held note, a
+  sine at a chosen harmonic swells in after an Onset time and stays until
+  the strings are muted. Knobs: Harmonic, Onset, Swell, Gain, Wobble, Active.
+- meilichios: Blues Driver style overdrive. 1.2 V diode-feedback knee, FET
+  square-law bend, Boss-style Tone blend. Knobs: Gain, Tone, Level.
+  Aliasing at full Gain measured at -124 dB.
+
 ## 0.2.0 - 2026-10-19
 
 Adds bromios, a ProCo RAT style distortion pedal, as a second plugin in the
