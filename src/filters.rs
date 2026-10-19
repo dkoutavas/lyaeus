@@ -29,6 +29,13 @@ impl OnePole {
         x - self.lowpass(x)
     }
 
+    /// A new filter (new corner) that carries on from where `other` left
+    /// off, so a knob move does not click.
+    pub fn with_state_of(mut self, other: &OnePole) -> Self {
+        self.state = other.state;
+        self
+    }
+
     pub fn reset(&mut self) {
         self.state = 0.0;
     }

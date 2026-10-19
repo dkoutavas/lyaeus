@@ -1,5 +1,6 @@
-//! lyaeus: a guitar tube-amp overdrive. Plugin glue lives here; the sound
-//! lives in `amp.rs`.
+//! lyaeus: a guitar tube-amp overdrive, and bromios, the RAT-style pedal
+//! that goes in front of it. Both ship in this one bundle. The amp's plugin
+//! glue lives here and its sound in `amp.rs`; the pedal is all in `rat.rs`.
 
 use nih_plug::prelude::*;
 use std::sync::Arc;
@@ -7,11 +8,13 @@ use std::sync::Arc;
 mod amp;
 mod filters;
 mod oversample;
+mod rat;
 mod tonestack;
 #[cfg(test)]
 mod testutil;
 
 use amp::{Channel, Controls};
+use rat::Bromios;
 
 pub struct Lyaeus {
     params: Arc<LyaeusParams>,
@@ -195,5 +198,5 @@ impl Vst3Plugin for Lyaeus {
         &[Vst3SubCategory::Fx, Vst3SubCategory::Distortion];
 }
 
-nih_export_clap!(Lyaeus);
-nih_export_vst3!(Lyaeus);
+nih_export_clap!(Lyaeus, Bromios);
+nih_export_vst3!(Lyaeus, Bromios);
