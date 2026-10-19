@@ -220,6 +220,19 @@ ceiling, the tone range. For euios: YIN on sines, on a plucked string and
 on noise; silence; the octave swelling in after the onset and dying after
 a mute; a new note restarting the clock.
 
+## Offline render
+
+To hear the chain on a recording without a host, or to measure it:
+
+```bash
+ffmpeg -i take.wav -ac 1 -ar 48000 -c:a pcm_f32le in.wav
+ffmpeg -i cab.wav -ac 1 -ar 48000 -c:a pcm_f32le ir.wav
+cargo run --release --example render -- in.wav ir.wav renders
+```
+
+It writes one 16-bit WAV per preset with the cab applied, prints peak,
+RMS and crest factor per stage, and logs what euios detected.
+
 ## Roadmap
 
 - A cabinet impulse response loader, if Bitwig's Convolution device ever
