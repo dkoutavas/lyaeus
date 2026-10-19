@@ -1,11 +1,14 @@
-//! lyaeus: a guitar tube-amp overdrive, and bromios, the RAT-style pedal
-//! that goes in front of it. Both ship in this one bundle. The amp's plugin
-//! glue lives here and its sound in `amp.rs`; the pedal is all in `rat.rs`.
+//! lyaeus, a guitar tube-amp overdrive, and the pedals that go in front of
+//! it: bromios (RAT), meilichios (Blues Driver) and euios (feedback). All
+//! ship in this one bundle. The amp's plugin glue lives here and its sound
+//! in `amp.rs`; each pedal is all in its own file.
 
 use nih_plug::prelude::*;
 use std::sync::Arc;
 
 mod amp;
+mod drive;
+mod feedback;
 mod filters;
 mod oversample;
 mod rat;
@@ -14,6 +17,8 @@ mod tonestack;
 mod testutil;
 
 use amp::{Channel, Controls};
+use drive::Meilichios;
+use feedback::Euios;
 use rat::Bromios;
 
 pub struct Lyaeus {
@@ -198,5 +203,5 @@ impl Vst3Plugin for Lyaeus {
         &[Vst3SubCategory::Fx, Vst3SubCategory::Distortion];
 }
 
-nih_export_clap!(Lyaeus, Bromios);
-nih_export_vst3!(Lyaeus, Bromios);
+nih_export_clap!(Lyaeus, Bromios, Euios, Meilichios);
+nih_export_vst3!(Lyaeus, Bromios, Euios, Meilichios);

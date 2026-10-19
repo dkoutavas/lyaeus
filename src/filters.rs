@@ -36,6 +36,14 @@ impl OnePole {
         self
     }
 
+    pub fn peek(&self) -> f32 {
+        self.state
+    }
+
+    pub fn set(&mut self, value: f32) {
+        self.state = value;
+    }
+
     pub fn reset(&mut self) {
         self.state = 0.0;
     }
