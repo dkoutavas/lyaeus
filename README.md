@@ -1,11 +1,14 @@
 # lyaeus
 
-A guitar tube-amp overdrive plugin for Linux: CLAP and VST3, written in Rust
-with nih-plug. Lyaeus (Λυαῖος, "the loosener") is an epithet of Dionysus.
+Two guitar plugins for Linux in one bundle, CLAP and VST3, written in Rust
+with nih-plug. Both names are epithets of Dionysus.
 
-The target sound is a cranked Fender-style amp: the kind of amp Sonic Youth
-pushed into breakup and then hit with a pedal. This plugin is the amp. Put
-your pedal plugins in front of it and a cabinet impulse response after it.
+- **lyaeus** (Λυαῖος, "the loosener"): a cranked Fender-style tube amp, the
+  kind Sonic Youth pushed into breakup.
+- **bromios** (Βρόμιος, "the roarer"): a ProCo RAT style distortion pedal
+  to put in front of it.
+
+Chain in the host: bromios, then lyaeus, then a cabinet impulse response.
 
 No model and no machine learning. Each stage is a small piece of circuit
 math with a comment that says what it stands for and why it is there.
@@ -13,7 +16,7 @@ math with a comment that says what it stands for and why it is there.
 ## Install
 
 Requirements: a Rust toolchain and Bitwig Studio (or another CLAP/VST3
-host) on native Linux.
+host) on native Linux. One build installs both plugins.
 
 ```bash
 ./build-linux.sh            # test, build, install to ~/.clap and ~/.vst3
@@ -28,7 +31,9 @@ after it with a guitar cabinet impulse response. Without a cabinet the
 output is the raw power stage and sounds thin and fizzy, as a real amp does
 through a flat speaker.
 
-## Knobs
+## lyaeus, the amp
+
+### Knobs
 
 | Knob | What it does |
 |------|--------------|
@@ -38,7 +43,7 @@ through a flat speaker.
 | Sag | How much the power supply droops under load. More sag means more compression and a slower swell after a hard attack. |
 | Master | Output level, -40 to +12 dB. |
 
-## Signal path
+### Signal path
 
 ```text
 in -> 40 Hz high-pass -> Bright -> Gain -> 8x up
@@ -68,6 +73,61 @@ the amp, and the plugin maps the knob the same way.
 The power stage is a symmetric soft clipper whose ceiling follows an
 envelope of the signal. Sag sets how far the ceiling drops.
 
+## bromios, the pedal
+
+### Knobs
+
+| Knob | What it does |
+|------|--------------|
+| Distortion | The RAT's 100k feedback pot, audio taper: half way is about 9 kOhm, not 50. |
+| Filter | One-pole low-pass from 32 kHz (0) down to 475 Hz (10). Clockwise is darker, as on the pedal. |
+| Volume | Output level, -40 to +12 dB. The diodes hold the signal near 0.65 V, so -10 dB lands around a hot pickup. |
+
+### Signal path
+
+```text
+in -> 20 Hz high-pass -> gain network -> feedback-cap low-pass -> 8x up
+  -> op-amp (rate-limited one-pole within the rails) -> diode clipper
+  -> 8x down -> Filter low-pass -> 5 Hz high-pass -> Volume -> out
+```
+
+The model works in volts, with one full-scale sample taken as one volt.
+
+The gain network is the LM308 non-inverting stage with the Distortion pot
+as feedback and two RC legs to ground, 47 Ohm + 4.7 uF and 560 Ohm +
+2.2 uF. Gain is `1 + Rf/R` above each leg's corner (720 Hz and 130 Hz), so
+it reaches 66 dB for the mids and highs but far less for bass. That is why
+a RAT stays tight at full tilt.
+
+The op-amp is a rate-limited one-pole. Its 30 pF compensation cap is both
+the dominant pole (closed-loop corner = 1 MHz / gain, about 470 Hz at full
+Distortion) and the reason the output cannot move faster than 0.3 V/us.
+Small errors see a low-pass; large ones ramp at the slew rate. Square edges
+become ramps, and that softening is most of what people mean by "the LM308
+is the sound". The output stays within +-4 V, the rails on a 9 V supply.
+
+The diode clipper is 1 kOhm into two antiparallel 1N914 diodes. The node
+voltage solves `(vin - v) / R = 2 Is sinh(v / nVt)`, which has no closed
+form, so the plugin solves it with Newton's method once per grid point at
+start-up and interpolates a table in the audio loop.
+
+### What the measurements taught
+
+The first op-amp model was a low-pass followed by a plain slew limiter. It
+aliased at -54 dB, and neither antiderivative anti-aliasing on the diode
+knee nor sub-sample ramp starts moved that by more than 4 dB. Bypassing
+blocks one at a time found the source: the hand-over between "ramping" and
+"tracking" snapped to the sample grid. The rate-limited one-pole has no
+such hand-over, its slope is continuous, and the same test now reads
+-93 dB. Antiderivative anti-aliasing was then measured again: 1 dB better,
+so it was removed.
+
+| Op-amp model | Worst audible alias at 8x |
+|--------------|---------------------------|
+| low-pass, then slew limiter | -54 dB |
+| same, plus ADAA on the diode knee | -58 dB |
+| rate-limited one-pole | -93 dB |
+
 ## Oversampling
 
 Clipping creates harmonics far above the audible band. At the plain sample
@@ -75,16 +135,16 @@ rate they fold back below Nyquist as inharmonic fizz. The nonlinear path
 runs at 8 times the host rate behind a 257-tap windowed-sinc filter, and
 the plugin reports 32 samples of latency to the host.
 
-The unit test `aliasing_stays_below_minus_60_db_at_full_gain` measures the
-worst non-harmonic spectral line for a 1010 Hz tone at full gain:
+The aliasing tests measure the worst non-harmonic spectral line for a
+1010 Hz tone at full gain or full distortion:
 
-| Oversampling | Worst audible alias |
-|--------------|---------------------|
-| 4x | -66 dB |
-| 8x | -96 dB |
-| 16x | -104 dB |
+| Oversampling | lyaeus | bromios |
+|--------------|--------|---------|
+| 4x | -66 dB | |
+| 8x | -96 dB | -93 dB |
+| 16x | -104 dB | |
 
-8x is the shipped setting. Change `FACTOR` and `TAPS` in `src/oversample.rs`
+8x is the shipped setting for both. Change `FACTOR` and `TAPS` in `src/oversample.rs`
 to try another.
 
 ## Tests
@@ -94,15 +154,17 @@ cargo test --release -- --nocapture
 ```
 
 The tests use no FFT crate; a naive DFT over 4800 samples is fast enough.
-They check that the tone stack's digital filter matches the analog
-transfer function, that the stack scoops at noon and moves with each knob,
-that the oversampler round trip is a pure 32-sample delay, that silence
-stays silence, that the output carries no DC, that Sag compresses a held
-note, and the aliasing level above.
+For the amp they check that the tone stack's digital filter matches the
+analog transfer function, that the stack scoops at noon and moves with
+each knob, that the oversampler round trip is a pure 32-sample delay, that
+silence stays silence, that the output carries no DC, that Sag compresses
+a held note, and the aliasing level above. For the pedal they check the
+gain network's 66 dB and its bass roll-off, the op-amp's slew rate and
+small-signal pole, the diode table against the solver, silence, DC, and
+the aliasing level.
 
 ## Roadmap
 
-- A RAT-style distortion pedal as a second plugin, to go in front.
 - A cabinet impulse response loader, if Bitwig's Convolution device ever
   gets in the way.
 - A standalone JACK build for tweaking without restarting the host.
