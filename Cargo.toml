@@ -1,0 +1,25 @@
+[workspace]
+members = ["xtask"]
+
+[package]
+name = "lyaeus"
+version = "0.1.0"
+edition = "2021"
+authors = ["dkoutavas"]
+description = "Guitar tube-amp overdrive plugin (CLAP/VST3)"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/dkoutavas/lyaeus"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Same pinned rev as drumgen: known to build here and to load in Bitwig.
+# The rev must match the one in xtask/Cargo.toml, otherwise cargo pulls two
+# nih_plug copies and the bundler sees a different Plugin trait.
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149ec4d62757d0b448809148a0c3ca6e09a95" }
+
+[profile.release]
+strip = true
+lto = "thin"
+opt-level = 3

@@ -1,0 +1,3 @@
+# nih-plug bundler alias: `cargo xtask bundle lyaeus --release`
+[alias]
+xtask = "run --release --package xtask --"
